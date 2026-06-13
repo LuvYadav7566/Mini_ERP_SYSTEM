@@ -21,7 +21,18 @@ app.use(express.json());
 // Routes
 // We use systematic route registration:
 import authRouter from './routes/auth.routes.js';
+import productRouter from './routes/product.routes.js';
+import vendorRouter from './routes/vendor.routes.js';
+import purchaseRouter from './routes/purchase.routes.js';
+import manufacturingRouter from './routes/manufacturing.routes.js';
+import salesRouter from './routes/sales.routes.js';
+
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/products', productRouter);
+app.use('/api/v1/vendors', vendorRouter);
+app.use('/api/v1/purchase', purchaseRouter);
+app.use('/api/v1/manufacturing', manufacturingRouter);
+app.use('/api/v1/sales', salesRouter);
 
 // Base route
 app.get('/', (req, res) => {

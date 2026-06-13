@@ -5,6 +5,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Products from './pages/Products';
+import StockLedger from './pages/StockLedger';
+import Purchase from './pages/Purchase';
+import BoM from './pages/BoM';
+import Manufacturing from './pages/Manufacturing';
+import Sales from './pages/Sales';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +40,42 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/products" 
+                element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/inventory" 
+                element={
+                  <ProtectedRoute>
+                    <StockLedger />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/purchase" 
+                element={<Navigate to="/" replace />}
+              />
+              <Route 
+                path="/bom" 
+                element={<Navigate to="/" replace />}
+              />
+              <Route 
+                path="/manufacturing" 
+                element={<Navigate to="/" replace />}
+              />
+              <Route 
+                path="/sales" 
+                element={
+                  <ProtectedRoute>
+                    <Sales />
                   </ProtectedRoute>
                 } 
               />
