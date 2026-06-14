@@ -61,15 +61,27 @@ function App() {
               />
               <Route 
                 path="/purchase" 
-                element={<Navigate to="/" replace />}
+                element={
+                  <ProtectedRoute>
+                    <Purchase />
+                  </ProtectedRoute>
+                }
               />
               <Route 
                 path="/bom" 
-                element={<Navigate to="/" replace />}
+                element={
+                  <ProtectedRoute>
+                    <BoM />
+                  </ProtectedRoute>
+                }
               />
               <Route 
                 path="/manufacturing" 
-                element={<Navigate to="/" replace />}
+                element={
+                  <ProtectedRoute>
+                    <Manufacturing />
+                  </ProtectedRoute>
+                }
               />
               <Route 
                 path="/sales" 

@@ -44,21 +44,7 @@ const Sidebar = () => {
       <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1">
         {links.map((link) => {
           if (!hasRole(link.roles)) return null;
-          const isAllowed = ['/', '/products', '/inventory', '/sales'].includes(link.to);
           const Icon = link.icon;
-
-          if (!isAllowed) {
-            return (
-              <div
-                key={link.to}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 bg-slate-50/30 border-l-4 border-transparent cursor-not-allowed opacity-50 select-none"
-                title="Temporarily disabled"
-              >
-                <Icon size={18} />
-                <span>{link.label}</span>
-              </div>
-            );
-          }
 
           return (
             <NavLink

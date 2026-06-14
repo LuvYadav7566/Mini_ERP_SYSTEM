@@ -29,9 +29,6 @@ const Login = () => {
   };
 
   const handleQuickLogin = async (userRole) => {
-    if (['admin', 'purchase', 'manufacturing', 'owner'].includes(userRole.toLowerCase())) {
-      return;
-    }
     setUsername(userRole);
     setPassword('password123');
     setError('');
@@ -147,18 +144,12 @@ const Login = () => {
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {['admin', 'sales', 'purchase', 'manufacturing', 'inventory', 'owner'].map((role) => {
-                  const isDisabled = ['admin', 'purchase', 'manufacturing', 'owner'].includes(role);
                   return (
                     <button
                       key={role}
                       type="button"
-                      disabled={isDisabled}
                       onClick={() => handleQuickLogin(role)}
-                      className={`rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition ${
-                        isDisabled
-                          ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
-                          : 'border-blue-100 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
-                      }`}
+                      className="rounded-xl border border-blue-100 bg-white px-3 py-2.5 text-sm font-medium capitalize transition text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                     >
                       {role}
                     </button>
