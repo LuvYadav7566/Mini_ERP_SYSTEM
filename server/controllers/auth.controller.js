@@ -12,7 +12,7 @@ const generateToken = (id) => {
 // @access  Public
 export const login = async (req, res, next) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
 
     if (!username || !password) {
       res.status(400);
@@ -22,6 +22,11 @@ export const login = async (req, res, next) => {
     const user = await User.findOne({ username });
 
     if (user && (await user.comparePassword(password))) {
+      if (role && user.role !== role) {
+        res.status(401);
+        throw new Error('Selected role does not match user account role');
+      }
+
       res.json({
         _id: user._id,
         username: user.username,

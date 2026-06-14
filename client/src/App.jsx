@@ -5,6 +5,13 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Products from './pages/Products';
+import StockLedger from './pages/StockLedger';
+import Purchase from './pages/Purchase';
+import BoM from './pages/BoM';
+import Manufacturing from './pages/Manufacturing';
+import Sales from './pages/Sales';
+import AuditLogs from './pages/AuditLogs';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +41,62 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/products" 
+                element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/inventory" 
+                element={
+                  <ProtectedRoute>
+                    <StockLedger />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/purchase" 
+                element={
+                  <ProtectedRoute>
+                    <Purchase />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/bom" 
+                element={
+                  <ProtectedRoute>
+                    <BoM />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/manufacturing" 
+                element={
+                  <ProtectedRoute>
+                    <Manufacturing />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/sales" 
+                element={
+                  <ProtectedRoute>
+                    <Sales />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/audit-logs" 
+                element={
+                  <ProtectedRoute>
+                    <AuditLogs />
                   </ProtectedRoute>
                 } 
               />

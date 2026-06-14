@@ -5,7 +5,7 @@ import NotificationToast from './NotificationToast';
 
 const Layout = ({ children, title }) => {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-darkBg text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f5f9ff] text-slate-800">
       {/* Sidebar navigation */}
       <Sidebar />
 
@@ -15,7 +15,7 @@ const Layout = ({ children, title }) => {
         <Header title={title} />
 
         {/* Dynamic content rendering */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950/20 via-darkBg to-darkBg">
+        <main className="flex-1 overflow-y-auto p-6 bg-[#f5f9ff]">
           <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>
