@@ -40,7 +40,7 @@ const salesOrderSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['Draft', 'Confirmed', 'Partially Delivered', 'Fully Delivered', 'Cancelled'],
+    enum: ['Draft', 'Confirmed', 'Partially Delivered', 'Fully Delivered', 'Cancelled', 'Fully Deliverable', 'Partially Deliverable', 'Waiting for Stock'],
     default: 'Draft',
   },
   totalAmount: {
@@ -60,6 +60,26 @@ const salesOrderSchema = new mongoose.Schema({
   },
   confirmedAt: Date,
   completedAt: Date,
+  allowPartialDelivery: {
+    type: Boolean,
+    default: true,
+  },
+  availableQuantity: {
+    type: Number,
+    default: 0,
+  },
+  shortageQuantity: {
+    type: Number,
+    default: 0,
+  },
+  pendingQuantity: {
+    type: Number,
+    default: 0,
+  },
+  expectedDeliveryDate: {
+    type: Date,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

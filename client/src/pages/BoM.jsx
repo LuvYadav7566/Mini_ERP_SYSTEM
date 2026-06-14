@@ -172,12 +172,12 @@ const BoM = () => {
 
   return (
     <Layout title="Bill of Materials (BoM)">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b border-slate-200 pb-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <ClipboardList className="text-cyan-400" size={22} /> Recipe Management
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <ClipboardList className="text-cyan-500" size={22} /> Recipe Management
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Define structure, component quantities, and assembly operations for manufactured furniture.
           </p>
         </div>
@@ -203,7 +203,7 @@ const BoM = () => {
             placeholder="Search by Recipe Name or Finished Product..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-950/40 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100 transition-colors"
           />
         </div>
       </div>
@@ -212,11 +212,11 @@ const BoM = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side: Recipe List */}
         <div className="lg:col-span-1 space-y-3">
-          <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Recipes List</h3>
+          <h3 className="text-xs font-bold text-cyan-600 uppercase tracking-wider">Recipes List</h3>
           {bomsLoading ? (
-            <div className="glass-panel p-6 text-center text-cyan-400 font-mono text-xs">LOADING RECIPES...</div>
+            <div className="glass-panel p-6 text-center text-cyan-600 font-mono text-xs">LOADING RECIPES...</div>
           ) : filteredBoms.length === 0 ? (
-            <div className="glass-panel p-6 text-center text-slate-400 text-xs">No recipes found.</div>
+            <div className="glass-panel p-6 text-center text-slate-500 text-xs">No recipes found.</div>
           ) : (
             <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
               {filteredBoms.map((bom) => (
@@ -225,16 +225,16 @@ const BoM = () => {
                   onClick={() => setSelectedBoM(bom)}
                   className={`p-4 rounded-xl border transition-all cursor-pointer ${
                     selectedBoM?._id === bom._id
-                      ? 'glass-panel-glow border-cyan-400/30 bg-cyan-500/5'
-                      : 'glass-panel border-slate-850 hover:border-slate-700'
+                      ? 'border-cyan-200 bg-cyan-50/50 shadow-sm'
+                      : 'bg-white border-slate-200 hover:border-slate-350'
                   }`}
                 >
-                  <h4 className="font-semibold text-slate-100 text-sm">{bom.name}</h4>
-                  <div className="text-xs text-slate-400 mt-1 flex justify-between">
+                  <h4 className="font-semibold text-slate-800 text-sm">{bom.name}</h4>
+                  <div className="text-xs text-slate-500 mt-1 flex justify-between">
                     <span>Product: {bom.product?.name}</span>
-                    <span className="font-mono text-cyan-400 text-[10px]">{bom.product?.sku}</span>
+                    <span className="font-mono text-cyan-600 text-[10px]">{bom.product?.sku}</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-2 flex justify-between border-t border-slate-850/60 pt-2">
+                  <div className="text-[10px] text-slate-550 mt-2 flex justify-between border-t border-slate-150 pt-2">
                     <span>{bom.components.length} components</span>
                     <span>{bom.operations.length} steps</span>
                   </div>
@@ -247,20 +247,20 @@ const BoM = () => {
         {/* Right Side: Recipe Details */}
         <div className="lg:col-span-2">
           {selectedBoM ? (
-            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-250 shadow-sm space-y-6">
               {/* Detail Header */}
-              <div className="flex justify-between items-start border-b border-slate-850 pb-4">
+              <div className="flex justify-between items-start border-b border-slate-200 pb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100">{selectedBoM.name}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Finished Goods output: <span className="font-semibold text-slate-200">{selectedBoM.product?.name}</span>
-                    <span className="font-mono text-cyan-400 ml-1.5 text-[10px]">[{selectedBoM.product?.sku}]</span>
+                  <h3 className="text-lg font-bold text-slate-800">{selectedBoM.name}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Finished Goods output: <span className="font-semibold text-slate-800">{selectedBoM.product?.name}</span>
+                    <span className="font-mono text-cyan-600 ml-1.5 text-[10px]">[{selectedBoM.product?.sku}]</span>
                   </p>
                 </div>
                 {canDelete && (
                   <button
                     onClick={() => handleDeleteBoM(selectedBoM._id, selectedBoM.name)}
-                    className="p-2 bg-red-500/10 hover:bg-red-500/25 text-red-400 rounded-lg border border-red-500/20 transition-all"
+                    className="p-2 bg-red-50 hover:bg-red-100 text-red-655 rounded-lg border border-red-205 transition-all"
                     title="Delete Recipe"
                   >
                     <Trash2 size={16} />
@@ -270,24 +270,24 @@ const BoM = () => {
 
               {/* Components list */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Wrench size={14} /> Bill of Materials (Raw Components)
                 </h4>
-                <div className="border border-slate-850 rounded-xl overflow-hidden text-xs">
+                <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-950/40 text-slate-400 border-b border-slate-850 font-semibold">
+                      <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                         <th className="px-4 py-2.5">Component SKU</th>
                         <th className="px-4 py-2.5">Component Name</th>
                         <th className="px-4 py-2.5 text-right">Qty Needed (Per Unit)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-850 text-slate-200">
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
                       {selectedBoM.components.map((comp, idx) => (
-                        <tr key={idx} className="hover:bg-slate-800/10">
-                          <td className="px-4 py-2.5 font-mono text-cyan-400">{comp.product?.sku}</td>
+                        <tr key={idx} className="hover:bg-slate-50/50">
+                          <td className="px-4 py-2.5 font-mono text-cyan-600">{comp.product?.sku}</td>
                           <td className="px-4 py-2.5">{comp.product?.name}</td>
-                          <td className="px-4 py-2.5 text-right font-bold text-slate-100">{comp.quantity}</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-slate-900">{comp.quantity}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -297,26 +297,26 @@ const BoM = () => {
 
               {/* Operations list */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock size={14} /> Assembly & Manufacturing Operations
                 </h4>
-                <div className="border border-slate-850 rounded-xl overflow-hidden text-xs">
+                <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-950/40 text-slate-400 border-b border-slate-850 font-semibold">
+                      <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                         <th className="px-4 py-2.5">Step #</th>
                         <th className="px-4 py-2.5">Operation Name</th>
                         <th className="px-4 py-2.5">Work Center Location</th>
                         <th className="px-4 py-2.5 text-right">Standard Duration</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-850 text-slate-200">
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
                       {selectedBoM.operations.map((op, idx) => (
-                        <tr key={idx} className="hover:bg-slate-800/10">
-                          <td className="px-4 py-2.5 font-mono text-slate-400">{idx + 1}</td>
+                        <tr key={idx} className="hover:bg-slate-50/50">
+                          <td className="px-4 py-2.5 font-mono text-slate-500">{idx + 1}</td>
                           <td className="px-4 py-2.5 font-semibold">{op.name}</td>
-                          <td className="px-4 py-2.5 text-slate-300">{op.workCenter}</td>
-                          <td className="px-4 py-2.5 text-right font-mono font-bold text-cyan-400">
+                          <td className="px-4 py-2.5 text-slate-650">{op.workCenter}</td>
+                          <td className="px-4 py-2.5 text-right font-mono font-bold text-cyan-600">
                             {op.duration} mins
                           </td>
                         </tr>
@@ -327,17 +327,17 @@ const BoM = () => {
               </div>
 
               {selectedBoM.notes && (
-                <div className="p-3 bg-slate-950/20 border border-slate-850 rounded-xl">
-                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <FileText size={12} /> Recipe Notes
                   </h5>
-                  <p className="text-xs text-slate-300 italic">{selectedBoM.notes}</p>
+                  <p className="text-xs text-slate-600 italic">{selectedBoM.notes}</p>
                 </div>
               )}
             </div>
           ) : (
-            <div className="glass-panel p-12 rounded-2xl border border-slate-800 text-center text-slate-400 text-sm">
-              <PlayCircle className="mx-auto text-slate-500 mb-3" size={32} />
+            <div className="bg-white p-12 rounded-2xl border border-slate-250 shadow-sm text-center text-slate-500 text-sm">
+              <PlayCircle className="mx-auto text-slate-400 mb-3" size={32} />
               Select a Bill of Materials recipe from the left list to view structure details.
             </div>
           )}
@@ -346,25 +346,25 @@ const BoM = () => {
 
       {/* CREATE MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl glass-panel-glow bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-              <h3 className="font-bold text-slate-100">Create Bill of Materials</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-slate-800">Create Bill of Materials</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-655">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
               {errorMessage && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex gap-2 items-center">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-650 text-xs flex gap-2 items-center">
                   <AlertTriangle size={14} /> {errorMessage}
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 font-semibold mb-1">Recipe Name *</label>
+                  <label className="block text-xs text-slate-605 font-semibold mb-1">Recipe Name *</label>
                   <input
                     type="text"
                     required
@@ -375,9 +375,9 @@ const BoM = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 font-semibold mb-1">Output Finished Good *</label>
+                  <label className="block text-xs text-slate-605 font-semibold mb-1">Output Finished Good *</label>
                   {availableProducts.length === 0 ? (
-                    <div className="text-xs text-red-400 pt-3 italic">
+                    <div className="text-xs text-red-650 pt-3 italic">
                       No finished goods available without a recipe. Add finished goods in the Catalog first.
                     </div>
                   ) : (
@@ -399,13 +399,13 @@ const BoM = () => {
               </div>
 
               {/* Components */}
-              <div className="space-y-3 border-t border-slate-800 pt-3">
+              <div className="space-y-3 border-t border-slate-200 pt-3">
                 <div className="flex justify-between items-center">
-                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Required Components</h4>
+                  <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-wider">Required Components</h4>
                   <button
                     type="button"
                     onClick={handleAddComponent}
-                    className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
+                    className="text-xs text-cyan-650 hover:text-cyan-700 flex items-center gap-1 font-semibold"
                   >
                     <PlusCircle size={14} /> Add component
                   </button>
@@ -413,9 +413,9 @@ const BoM = () => {
 
                 <div className="space-y-2">
                   {formData.components.map((item, idx) => (
-                    <div key={idx} className="flex gap-3 items-end bg-slate-950/20 p-3 rounded-xl border border-slate-850">
+                    <div key={idx} className="flex gap-3 items-end bg-slate-50/50 p-3 rounded-xl border border-slate-150">
                       <div className="flex-1">
-                        <label className="block text-[10px] text-slate-400 font-semibold mb-1">Component Product *</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Component Product *</label>
                         <select
                           value={item.product}
                           required
@@ -431,7 +431,7 @@ const BoM = () => {
                         </select>
                       </div>
                       <div className="w-28">
-                        <label className="block text-[10px] text-slate-400 font-semibold mb-1">Quantity Needed *</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Quantity Needed *</label>
                         <input
                           type="number"
                           min="1"
@@ -445,7 +445,7 @@ const BoM = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoveComponent(idx)}
-                          className="text-red-400 hover:text-red-300 p-2.5"
+                          className="text-red-655 hover:text-red-750 p-2.5"
                         >
                           <MinusCircle size={16} />
                         </button>
@@ -456,13 +456,13 @@ const BoM = () => {
               </div>
 
               {/* Operations */}
-              <div className="space-y-3 border-t border-slate-800 pt-3">
+              <div className="space-y-3 border-t border-slate-200 pt-3">
                 <div className="flex justify-between items-center">
-                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Production Steps</h4>
+                  <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-wider">Production Steps</h4>
                   <button
                     type="button"
                     onClick={handleAddOperation}
-                    className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
+                    className="text-xs text-cyan-655 hover:text-cyan-700 flex items-center gap-1 font-semibold"
                   >
                     <PlusCircle size={14} /> Add Operation
                   </button>
@@ -470,9 +470,9 @@ const BoM = () => {
 
                 <div className="space-y-2">
                   {formData.operations.map((op, idx) => (
-                    <div key={idx} className="flex gap-3 items-end bg-slate-950/20 p-3 rounded-xl border border-slate-850">
+                    <div key={idx} className="flex gap-3 items-end bg-slate-50/50 p-3 rounded-xl border border-slate-150">
                       <div className="flex-1">
-                        <label className="block text-[10px] text-slate-400 font-semibold mb-1">Operation Name *</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Operation Name *</label>
                         <input
                           type="text"
                           required
@@ -483,7 +483,7 @@ const BoM = () => {
                         />
                       </div>
                       <div className="w-40">
-                        <label className="block text-[10px] text-slate-400 font-semibold mb-1">Work Center *</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Work Center *</label>
                         <select
                           value={op.workCenter}
                           required
@@ -497,7 +497,7 @@ const BoM = () => {
                         </select>
                       </div>
                       <div className="w-28">
-                        <label className="block text-[10px] text-slate-400 font-semibold mb-1">Duration (Mins) *</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Duration (Mins) *</label>
                         <input
                           type="number"
                           min="1"
@@ -511,7 +511,7 @@ const BoM = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoveOperation(idx)}
-                          className="text-red-400 hover:text-red-300 p-2.5"
+                          className="text-red-655 hover:text-red-750 p-2.5"
                         >
                           <MinusCircle size={16} />
                         </button>
@@ -522,7 +522,7 @@ const BoM = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Recipe Instructions / Notes</label>
+                <label className="block text-xs text-slate-605 font-semibold mb-1">Recipe Instructions / Notes</label>
                 <textarea
                   placeholder="Detail wood grains matching, standard quality instructions..."
                   value={formData.notes}
@@ -531,7 +531,7 @@ const BoM = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}

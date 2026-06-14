@@ -172,26 +172,26 @@ const Manufacturing = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Draft':
-        return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+        return 'bg-slate-500/10 text-slate-500 border border-slate-500/20';
       case 'Confirmed':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+        return 'bg-blue-500/10 text-blue-600 border border-blue-500/20';
       case 'In Progress':
-        return 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+        return 'bg-cyan-500/10 text-cyan-600 border border-cyan-500/20';
       case 'Completed':
-        return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
       default: // Cancelled
-        return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+        return 'bg-rose-500/10 text-rose-600 border border-rose-500/20';
     }
   };
 
   const getWOStatusBadge = (status) => {
     switch (status) {
       case 'Pending':
-        return 'bg-slate-950 text-slate-400 border border-slate-800';
+        return 'bg-slate-500/10 text-slate-500 border border-slate-500/20';
       case 'In Progress':
-        return 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse';
+        return 'bg-cyan-500/10 text-cyan-600 border border-cyan-500/20 animate-pulse';
       default: // Completed
-        return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
     }
   };
 
@@ -204,14 +204,29 @@ const Manufacturing = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Calculate Manufacturing Dashboard Stats
+  const totalOrders = orders.filter(o => o.status !== 'Cancelled').length;
+  
+  const completedOrders = orders.filter(o => o.status === 'Completed');
+  const completedOrdersCount = completedOrders.length;
+  const completedUnitsCount = completedOrders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+
+  const pendingOrders = orders.filter(o => ['Draft', 'Confirmed', 'In Progress'].includes(o.status));
+  const pendingOrdersCount = pendingOrders.length;
+  const pendingUnitsCount = pendingOrders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+
+  const activeOrders = orders.filter(o => o.status === 'In Progress');
+  const activeOrdersCount = activeOrders.length;
+  const activeUnitsCount = activeOrders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+
   return (
     <Layout title="Manufacturing Floor">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b border-slate-200 pb-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <Wrench className="text-cyan-400" size={22} /> Production Orders
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Wrench className="text-cyan-500" size={22} /> Production Orders
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Build finished items, track operation runs, and coordinate component consumption.
           </p>
         </div>
@@ -228,6 +243,71 @@ const Manufacturing = () => {
         )}
       </div>
 
+      {/* Manufacturing Dashboard Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 animate-in fade-in duration-200">
+        {/* Total Orders Card */}
+        <div className="glass-panel p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+            <Wrench size={20} />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider font-semibold">Total Orders</span>
+            <span className="text-base font-bold text-slate-800">
+              {ordersLoading ? '...' : `${totalOrders} MOs`}
+            </span>
+            <span className="text-[9px] text-slate-500 block mt-0.5">Excludes cancelled orders</span>
+          </div>
+        </div>
+
+        {/* Completed Products Card */}
+        <div className="glass-panel p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+            <CheckCircle size={20} />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider font-semibold">Completed Products</span>
+            <span className="text-base font-bold text-slate-800">
+              {ordersLoading ? '...' : `${completedUnitsCount} Units`}
+            </span>
+            <span className="text-[9px] text-slate-500 block mt-0.5">
+              {ordersLoading ? 'Calculating...' : `${completedOrdersCount} orders finished`}
+            </span>
+          </div>
+        </div>
+
+        {/* Pending Products Card */}
+        <div className="glass-panel p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
+            <Clock size={20} />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider font-semibold">Pending Products</span>
+            <span className="text-base font-bold text-slate-800">
+              {ordersLoading ? '...' : `${pendingUnitsCount} Units`}
+            </span>
+            <span className="text-[9px] text-slate-500 block mt-0.5">
+              {ordersLoading ? 'Calculating...' : `${pendingOrdersCount} orders pending`}
+            </span>
+          </div>
+        </div>
+
+        {/* In Progress Card */}
+        <div className="glass-panel p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-lg bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center">
+            <Play size={20} fill="currentColor" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider font-semibold">In Progress</span>
+            <span className="text-base font-bold text-slate-800">
+              {ordersLoading ? '...' : `${activeUnitsCount} Units`}
+            </span>
+            <span className="text-[9px] text-slate-500 block mt-0.5">
+              {ordersLoading ? 'Calculating...' : `${activeOrdersCount} orders active`}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Filter and Search Panel */}
       <div className="glass-panel p-4 rounded-xl flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[240px]">
@@ -237,16 +317,16 @@ const Manufacturing = () => {
             placeholder="Search by MO Number or Product..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-950/40 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100 transition-colors"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter size={14} className="text-cyan-400" />
+          <Filter size={14} className="text-cyan-500" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-950/40 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
           >
             <option value="All">All Statuses</option>
             <option value="Draft">Draft</option>
@@ -260,16 +340,16 @@ const Manufacturing = () => {
 
       {/* Orders List */}
       {ordersLoading ? (
-        <div className="glass-panel p-12 text-center text-cyan-400 font-mono">LOADING MANUFACTURING FLOOR...</div>
+        <div className="glass-panel p-12 text-center text-cyan-600 font-mono">LOADING MANUFACTURING FLOOR...</div>
       ) : filteredOrders.length === 0 ? (
-        <div className="glass-panel p-12 text-center text-slate-400 text-sm">
+        <div className="glass-panel p-12 text-center text-slate-500 text-sm">
           No manufacturing orders found.
         </div>
       ) : (
-        <div className="glass-panel rounded-xl overflow-x-auto border border-slate-800/80">
+        <div className="bg-white rounded-2xl overflow-x-auto border border-slate-250 shadow-sm animate-in fade-in duration-200">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/40 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <tr className="border-b border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-550 uppercase tracking-wider">
                 <th className="px-6 py-4">MO Number</th>
                 <th className="px-6 py-4">Finished Product</th>
                 <th className="px-6 py-4">Target Qty</th>
@@ -279,7 +359,7 @@ const Manufacturing = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-sm text-slate-200">
+            <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
               {filteredOrders.map((mo) => {
                 // Calculate operation stats
                 const totalWOs = mo.workOrders.length;
@@ -287,17 +367,17 @@ const Manufacturing = () => {
                 const progressPct = totalWOs > 0 ? Math.round((completedWOs / totalWOs) * 100) : 0;
 
                 return (
-                  <tr key={mo._id} className="hover:bg-slate-800/10 transition-colors">
-                    <td className="px-6 py-4 font-mono font-semibold text-cyan-400">
+                  <tr key={mo._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-mono font-semibold text-cyan-600">
                       {mo.moNumber}
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-100">
+                    <td className="px-6 py-4 font-semibold text-slate-900">
                       {mo.product?.name}
                     </td>
-                    <td className="px-6 py-4 font-mono font-bold">
+                    <td className="px-6 py-4 font-mono font-bold text-slate-800">
                       {mo.quantity} Units
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-300">
+                    <td className="px-6 py-4 text-xs text-slate-550">
                       {mo.assignee?.username || 'Unassigned'}
                     </td>
                     <td className="px-6 py-4">
@@ -307,13 +387,13 @@ const Manufacturing = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3 w-44">
-                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div
-                            className="bg-gradient-to-r from-cyan-400 to-indigo-400 h-full transition-all duration-550"
+                            className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full transition-all duration-550"
                             style={{ width: `${progressPct}%` }}
                           />
                         </div>
-                        <span className="text-[11px] font-mono text-slate-400">
+                        <span className="text-[11px] font-mono text-slate-500">
                           {completedWOs}/{totalWOs}
                         </span>
                       </div>
@@ -322,7 +402,7 @@ const Manufacturing = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenDetails(mo)}
-                          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-750 transition-all flex items-center gap-1"
+                          className="bg-slate-50 hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-all flex items-center gap-1"
                         >
                           Details & Steps
                         </button>
@@ -338,26 +418,26 @@ const Manufacturing = () => {
 
       {/* CREATE MO MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md glass-panel-glow bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-              <h3 className="font-bold text-slate-100">Draft Manufacturing Order</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">Draft Manufacturing Order</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-650">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
               {errorMessage && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex gap-2 items-center">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-650 text-xs flex gap-2 items-center">
                   <AlertTriangle size={14} /> {errorMessage}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Product output *</label>
+                <label className="block text-xs text-slate-605 font-semibold mb-1">Product output *</label>
                 {buildableProducts.length === 0 ? (
-                  <div className="text-xs text-red-400 pt-3 italic">
+                  <div className="text-xs text-red-600 pt-3 italic">
                     No products have a recipe configured. Set up a Bill of Materials recipe first.
                   </div>
                 ) : (
@@ -378,7 +458,7 @@ const Manufacturing = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Quantity *</label>
+                <label className="block text-xs text-slate-605 font-semibold mb-1">Quantity *</label>
                 <input
                   type="number"
                   min="1"
@@ -390,7 +470,7 @@ const Manufacturing = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Floor Assignee</label>
+                <label className="block text-xs text-slate-605 font-semibold mb-1">Floor Assignee</label>
                 <select
                   value={formData.assignee}
                   onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
@@ -406,7 +486,7 @@ const Manufacturing = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Special Notes</label>
+                <label className="block text-xs text-slate-605 font-semibold mb-1">Special Notes</label>
                 <textarea
                   placeholder="e.g. Rush order, specific wood grain details..."
                   value={formData.notes}
@@ -415,7 +495,7 @@ const Manufacturing = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -438,20 +518,20 @@ const Manufacturing = () => {
 
       {/* DETAILS Drawer Modal */}
       {showDetailsModal && selectedMO && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-3xl glass-panel-glow bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/20">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
               <div>
-                <h3 className="font-bold text-slate-100 flex items-center gap-2">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <span>Manufacturing Order:</span>
-                  <span className="text-cyan-400 font-mono">{selectedMO.moNumber}</span>
+                  <span className="text-cyan-600 font-mono">{selectedMO.moNumber}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${getStatusBadge(selectedMO.status)}`}>
                     {selectedMO.status}
                   </span>
                 </h3>
               </div>
-              <button onClick={() => setShowDetailsModal(false)} className="text-slate-400 hover:text-slate-200">
+              <button onClick={() => setShowDetailsModal(false)} className="text-slate-400 hover:text-slate-650">
                 <X size={18} />
               </button>
             </div>
@@ -459,31 +539,31 @@ const Manufacturing = () => {
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
               {/* Info grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/30 p-4 rounded-xl border border-slate-850 text-slate-300 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-600 text-xs">
                 <div>
-                  <div className="mb-1"><span className="text-slate-400">Output:</span> <span className="font-bold text-slate-100">{selectedMO.product?.name}</span></div>
-                  <div><span className="text-slate-400">SKU:</span> <span className="font-mono text-cyan-400">{selectedMO.product?.sku}</span></div>
-                  <div><span className="text-slate-400">Quantity to Produce:</span> <span className="font-bold font-mono text-slate-200">{selectedMO.quantity} Units</span></div>
+                  <div className="mb-1"><span className="text-slate-500">Output:</span> <span className="font-bold text-slate-900">{selectedMO.product?.name}</span></div>
+                  <div><span className="text-slate-550">SKU:</span> <span className="font-mono text-cyan-600">{selectedMO.product?.sku}</span></div>
+                  <div><span className="text-slate-500">Quantity to Produce:</span> <span className="font-bold font-mono text-slate-800">{selectedMO.quantity} Units</span></div>
                 </div>
                 <div>
-                  <div className="mb-1"><span className="text-slate-400">Created By:</span> <span className="text-slate-200">{selectedMO.createdBy?.username}</span></div>
-                  <div><span className="text-slate-400">Floor Assignee:</span> <span className="text-cyan-400">{selectedMO.assignee?.username || 'Unassigned'}</span></div>
+                  <div className="mb-1"><span className="text-slate-500">Created By:</span> <span className="text-slate-850">{selectedMO.createdBy?.username}</span></div>
+                  <div><span className="text-slate-500">Floor Assignee:</span> <span className="text-cyan-600">{selectedMO.assignee?.username || 'Unassigned'}</span></div>
                   {selectedMO.confirmedAt && (
-                    <div><span className="text-slate-400">Confirmed On:</span> <span className="text-slate-300">{new Date(selectedMO.confirmedAt).toLocaleDateString()}</span></div>
+                    <div><span className="text-slate-500">Confirmed On:</span> <span className="text-slate-700">{new Date(selectedMO.confirmedAt).toLocaleDateString()}</span></div>
                   )}
                 </div>
               </div>
 
               {/* Component availability list */}
               <div className="space-y-2.5">
-                <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-wider flex items-center gap-1">
                   <Layers size={14} /> Component Availability & Reservation Checklist
                 </h4>
 
-                <div className="border border-slate-850 rounded-xl overflow-hidden text-xs">
+                <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-950/40 text-slate-400 border-b border-slate-850 font-semibold">
+                      <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                         <th className="px-4 py-2.5">Component SKU</th>
                         <th className="px-4 py-2.5">Component Name</th>
                         <th className="px-4 py-2.5 text-right">Required</th>
@@ -491,7 +571,7 @@ const Manufacturing = () => {
                         <th className="px-4 py-2.5 text-right">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-850 text-slate-200">
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
                       {selectedMO.components.map((comp, idx) => {
                         const productDetail = comp.product;
                         const freeQty = productDetail ? productDetail.freeToUse : 0;
@@ -501,24 +581,24 @@ const Manufacturing = () => {
                         const isShortage = selectedMO.status === 'Draft' && freeQty < comp.quantityRequired;
                         
                         return (
-                          <tr key={idx} className="hover:bg-slate-800/10">
-                            <td className="px-4 py-2.5 font-mono text-cyan-400">{productDetail?.sku}</td>
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-2.5 font-mono text-cyan-600">{productDetail?.sku}</td>
                             <td className="px-4 py-2.5">{productDetail?.name}</td>
                             <td className="px-4 py-2.5 text-right font-mono font-bold">{comp.quantityRequired}</td>
-                            <td className="px-4 py-2.5 text-right font-mono text-slate-400">{freeQty}</td>
+                            <td className="px-4 py-2.5 text-right font-mono text-slate-550">{freeQty}</td>
                             <td className="px-4 py-2.5 text-right font-semibold">
                               {selectedMO.status === 'Draft' ? (
                                 isShortage ? (
-                                  <span className="text-red-400 flex items-center gap-1 justify-end">
+                                  <span className="text-red-600 flex items-center gap-1 justify-end">
                                     <AlertTriangle size={12} /> Shortage
                                   </span>
                                 ) : (
-                                  <span className="text-emerald-400 flex items-center gap-1 justify-end">
+                                  <span className="text-emerald-600 flex items-center gap-1 justify-end">
                                     <Check size={12} /> Ready
                                   </span>
                                 )
                               ) : (
-                                <span className="text-slate-400 italic">Reserved</span>
+                                <span className="text-slate-500 italic">Reserved</span>
                               )}
                             </td>
                           </tr>
@@ -531,8 +611,8 @@ const Manufacturing = () => {
 
               {/* Work Order flow tracking */}
               {selectedMO.status !== 'Draft' && (
-                <div className="space-y-3 border-t border-slate-800 pt-4">
-                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                <div className="space-y-3 border-t border-slate-200 pt-4">
+                  <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-wider flex items-center gap-1">
                     <Wrench size={14} /> Production Routing (Work Orders)
                   </h4>
 
@@ -553,18 +633,18 @@ const Manufacturing = () => {
                           key={wo._id}
                           className={`flex flex-col md:flex-row md:items-center justify-between p-3.5 rounded-xl border transition-all ${
                             isInProgress
-                              ? 'border-cyan-400/30 bg-cyan-500/5 shadow-md shadow-cyan-500/5'
-                              : 'border-slate-850 bg-slate-950/20'
+                              ? 'border-cyan-200 bg-cyan-50/50 shadow-sm shadow-cyan-500/5'
+                              : 'border-slate-200 bg-slate-50/50'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-6 h-6 rounded-full bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center font-mono">
+                            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-550 text-xs font-bold flex items-center justify-center font-mono">
                               {idx + 1}
                             </span>
                             <div>
-                              <div className="text-xs font-semibold text-slate-200">{wo.name}</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                Location: <span className="text-cyan-400 font-semibold">{wo.workCenter}</span> | Est: {wo.duration} mins
+                              <div className="text-xs font-semibold text-slate-800">{wo.name}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                Location: <span className="text-cyan-600 font-semibold">{wo.workCenter}</span> | Est: {wo.duration} mins
                               </div>
                             </div>
                           </div>
@@ -577,7 +657,7 @@ const Manufacturing = () => {
                             {canStart && (
                               <button
                                 onClick={() => startWOMutation.mutate({ id: selectedMO._id, woId: wo._id })}
-                                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded border border-cyan-500/20 text-xs font-semibold transition-all flex items-center gap-1"
+                                className="bg-cyan-50 hover:bg-cyan-100 text-cyan-600 px-3 py-1 border border-cyan-200 text-xs font-semibold transition-all flex items-center gap-1"
                               >
                                 <Play size={10} fill="currentColor" /> Start Step
                               </button>
@@ -586,7 +666,7 @@ const Manufacturing = () => {
                             {canComplete && (
                               <button
                                 onClick={() => completeWOMutation.mutate({ id: selectedMO._id, woId: wo._id })}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1"
                               >
                                 <CheckCircle size={11} /> Complete Step
                               </button>
@@ -601,14 +681,14 @@ const Manufacturing = () => {
 
               {/* Notes */}
               {selectedMO.notes && (
-                <div className="p-3 bg-slate-950/20 border border-slate-850 rounded-xl">
-                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Floor Notes</h5>
-                  <p className="text-xs text-slate-300 italic">{selectedMO.notes}</p>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Floor Notes</h5>
+                  <p className="text-xs text-slate-655 italic">{selectedMO.notes}</p>
                 </div>
               )}
 
               {/* Action buttons */}
-              <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+              <div className="flex items-center justify-between border-t border-slate-200 pt-4">
                 <div>
                   {selectedMO.status !== 'Completed' && selectedMO.status !== 'Cancelled' && canManage && (
                     <button

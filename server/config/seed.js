@@ -116,6 +116,76 @@ const seedUsers = async () => {
       }
     ];
 
+    // Programmatically generate another 105 products to cross 100 data
+    const woods = ['Teak', 'Mahogany', 'Maple', 'Pine', 'Walnut', 'Birch', 'Cherry'];
+    const itemTypes = [
+      { name: 'Dining Chair', category: 'Finished Good', baseCost: 30, markup: 2.2, type: 'Purchase', vendor: 'Comfort Seating Ltd.' },
+      { name: 'Coffee Table', category: 'Finished Good', baseCost: 45, markup: 2.5, type: 'Manufacturing' },
+      { name: 'Bookshelf', category: 'Finished Good', baseCost: 60, markup: 2.3, type: 'Manufacturing' },
+      { name: 'Desk Drawer', category: 'Component', baseCost: 15, markup: 2.0, type: 'Purchase', vendor: 'Apex Timber Supply' },
+      { name: 'Support Bracket', category: 'Component', baseCost: 2, markup: 2.5, type: 'Purchase', vendor: 'Fasteners Outlet Inc.' },
+      { name: 'Plank (Large)', category: 'Raw Material', baseCost: 8, markup: 1.8, type: 'Purchase', vendor: 'Apex Timber Supply' },
+      { name: 'Wood Polish', category: 'Other', baseCost: 4, markup: 2.0, type: 'Purchase', vendor: 'Fasteners Outlet Inc.' },
+    ];
+
+    let skuCounter = 1;
+    for (let w of woods) {
+      for (let type of itemTypes) {
+        const costPrice = parseFloat((type.baseCost + Math.random() * 10).toFixed(2));
+        const salesPrice = parseFloat((costPrice * type.markup).toFixed(2));
+        const freeToUse = Math.floor(Math.random() * 80) + 10;
+        
+        mockProducts.push({
+          sku: `SKU-${w.substring(0, 3).toUpperCase()}-${type.name.replace(/\s+/g, '-').substring(0, 5).toUpperCase()}-${String(skuCounter++).padStart(3, '0')}`,
+          name: `${w} ${type.name}`,
+          description: `Premium quality ${w.toLowerCase()} wood ${type.name.toLowerCase()} suitable for home and office use.`,
+          category: type.category,
+          salesPrice,
+          costPrice,
+          freeToUse,
+          reserved: 0,
+          procurementStrategy: type.type === 'Manufacturing' ? 'MTO' : 'MTS',
+          procureOnDemand: type.type === 'Manufacturing',
+          procurementType: type.type,
+          vendor: type.vendor || '',
+        });
+      }
+    }
+
+    const materials = ['Steel', 'Glass', 'Leather', 'Aluminum', 'Brass', 'Copper', 'Plastic', 'Fabric'];
+    const hardwareTypes = [
+      { name: 'Handle Pull', category: 'Component', baseCost: 3.50, markup: 2.1, type: 'Purchase', vendor: 'Fasteners Outlet Inc.' },
+      { name: 'Hinge Joint', category: 'Component', baseCost: 1.20, markup: 2.5, type: 'Purchase', vendor: 'Fasteners Outlet Inc.' },
+      { name: 'Frame Bar', category: 'Raw Material', baseCost: 12.00, markup: 1.9, type: 'Purchase', vendor: 'Apex Timber Supply' },
+      { name: 'Cushion Foam', category: 'Raw Material', baseCost: 7.00, markup: 2.0, type: 'Purchase', vendor: 'Comfort Seating Ltd.' },
+      { name: 'Office Stool', category: 'Finished Good', baseCost: 25.00, markup: 2.2, type: 'Manufacturing' },
+      { name: 'Side Shelf', category: 'Finished Good', baseCost: 35.05, markup: 2.4, type: 'Manufacturing' },
+      { name: 'Edge Banding', category: 'Other', baseCost: 0.80, markup: 3.0, type: 'Purchase', vendor: 'Fasteners Outlet Inc.' },
+    ];
+
+    for (let m of materials) {
+      for (let h of hardwareTypes) {
+        const costPrice = parseFloat((h.baseCost + Math.random() * 5).toFixed(2));
+        const salesPrice = parseFloat((costPrice * h.markup).toFixed(2));
+        const freeToUse = Math.floor(Math.random() * 150) + 15;
+        
+        mockProducts.push({
+          sku: `SKU-${m.substring(0, 3).toUpperCase()}-${h.name.replace(/\s+/g, '-').substring(0, 5).toUpperCase()}-${String(skuCounter++).padStart(3, '0')}`,
+          name: `${m} ${h.name}`,
+          description: `Durable ${m.toLowerCase()} ${h.name.toLowerCase()} design for ergonomic stability.`,
+          category: h.category,
+          salesPrice,
+          costPrice,
+          freeToUse,
+          reserved: 0,
+          procurementStrategy: h.type === 'Manufacturing' ? 'MTO' : 'MTS',
+          procureOnDemand: h.type === 'Manufacturing',
+          procurementType: h.type,
+          vendor: h.vendor || '',
+        });
+      }
+    }
+
     for (const p of mockProducts) {
       const product = new Product(p);
       const savedProd = await product.save();

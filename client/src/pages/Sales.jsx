@@ -27,6 +27,7 @@ import {
   PlusCircle,
   MinusCircle,
   ShoppingBag,
+  Check,
 } from 'lucide-react';
 
 const Sales = () => {
@@ -54,7 +55,12 @@ const Sales = () => {
     customerName: '',
     items: [{ product: '', quantity: 1, salesPrice: 0 }],
     notes: '',
+    allowPartialDelivery: true,
+    expectedDeliveryDate: '',
   });
+
+  const [soToConfirm, setSoToConfirm] = useState(null);
+  const [soToCancel, setSoToCancel] = useState(null);
 
   const [deliverItems, setDeliverItems] = useState([]); // Array of { product, sku, name, quantity, quantityDelivered, qtyToDeliver, onHand }
 
@@ -108,7 +114,7 @@ const Sales = () => {
       }
     },
     onError: (err) => {
-      alert(err.response?.data?.message || 'Failed to confirm Sales Order');
+      setErrorMessage(err.response?.data?.message || 'Failed to confirm Sales Order');
     },
   });
 
@@ -137,7 +143,7 @@ const Sales = () => {
       }
     },
     onError: (err) => {
-      alert(err.response?.data?.message || 'Failed to cancel Sales Order');
+      setErrorMessage(err.response?.data?.message || 'Failed to cancel Sales Order');
     },
   });
 
@@ -147,6 +153,8 @@ const Sales = () => {
       customerName: '',
       items: [{ product: '', quantity: 1, salesPrice: 0 }],
       notes: '',
+      allowPartialDelivery: true,
+      expectedDeliveryDate: '',
     });
     setErrorMessage('');
   };
@@ -167,7 +175,7 @@ const Sales = () => {
     const newItems = [...formData.items];
     if (field === 'product') {
       newItems[index].product = value;
-      const prod = products.find((p) => p._id === value);
+      const prod = (products || []).find((p) => p._id === value);
       if (prod) {
         newItems[index].salesPrice = prod.salesPrice;
       }
@@ -177,6 +185,47 @@ const Sales = () => {
       newItems[index].salesPrice = parseFloat(value) || 0;
     }
     setFormData({ ...formData, items: newItems });
+  };
+
+  // Dynamic shortage metrics for the form
+  const getFormShortageMetrics = () => {
+    let totalAvailable = 0;
+    let totalShortage = 0;
+    let totalQty = 0;
+    const itemsWithShortage = [];
+
+    (formData.items || []).forEach((item) => {
+      if (!item.product) return;
+      const product = (products || []).find((p) => p._id === item.product);
+      if (!product) return;
+
+      const qty = parseInt(item.quantity) || 0;
+      totalQty += qty;
+
+      const freeToUse = typeof product.freeToUse === 'number' ? product.freeToUse : 0;
+      const available = Math.max(0, Math.min(qty, freeToUse));
+      const shortage = Math.max(0, qty - freeToUse);
+
+      totalAvailable += available;
+      totalShortage += shortage;
+
+      if (shortage > 0) {
+        itemsWithShortage.push({
+          name: product.name,
+          sku: product.sku,
+          ordered: qty,
+          available,
+          shortage,
+        });
+      }
+    });
+
+    return {
+      totalAvailable,
+      totalShortage,
+      totalQty,
+      itemsWithShortage,
+    };
   };
 
   const handleCreateSubmit = (e) => {
@@ -190,6 +239,11 @@ const Sales = () => {
       setErrorMessage('Please fill in all product selections and ensure quantities are greater than zero');
       return;
     }
+    const metrics = getFormShortageMetrics();
+    if (metrics.totalShortage > 0 && formData.allowPartialDelivery && !formData.expectedDeliveryDate) {
+      setErrorMessage('Please specify an Expected Delivery Date for the pending items.');
+      return;
+    }
     createMutation.mutate(formData);
   };
 
@@ -197,32 +251,44 @@ const Sales = () => {
     setSelectedSO(so);
     setFormData({
       customerName: so.customerName,
-      items: so.items.map((i) => ({
-        product: i.product._id,
+      items: (so.items || []).map((i) => ({
+        product: i.product?._id || '',
         quantity: i.quantity,
         salesPrice: i.salesPrice,
       })),
       notes: so.notes || '',
+      allowPartialDelivery: so.allowPartialDelivery ?? true,
+      expectedDeliveryDate: so.expectedDeliveryDate ? new Date(so.expectedDeliveryDate).toISOString().split('T')[0] : '',
     });
     setShowEditModal(true);
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
+    const invalidItem = formData.items.find((i) => !i.product || i.quantity <= 0);
+    if (invalidItem) {
+      setErrorMessage('Please fill in all product selections and ensure quantities are greater than zero');
+      return;
+    }
+    const metrics = getFormShortageMetrics();
+    if (metrics.totalShortage > 0 && formData.allowPartialDelivery && !formData.expectedDeliveryDate) {
+      setErrorMessage('Please specify an Expected Delivery Date for the pending items.');
+      return;
+    }
     updateMutation.mutate({ id: selectedSO._id, data: formData });
   };
 
   const handleOpenDeliver = (so) => {
     setSelectedSO(so);
-    const items = so.items.map((item) => {
+    const items = (so.items || []).map((item) => {
       // Find latest product specs to verify physical stock onHand
-      const currentProd = products.find((p) => p._id === item.product._id);
+      const currentProd = item.product ? (products || []).find((p) => p._id === item.product._id) : null;
       const onHand = currentProd ? currentProd.onHand : 0;
       const remainder = item.quantity - item.quantityDelivered;
       return {
-        product: item.product._id,
-        sku: item.product.sku,
-        name: item.product.name,
+        product: item.product?._id || '',
+        sku: item.product?.sku || '',
+        name: item.product?.name || 'Unknown Product',
         quantity: item.quantity,
         quantityDelivered: item.quantityDelivered,
         qtyToDeliver: Math.min(remainder, onHand), // Default to either what is needed or what is physically on hand
@@ -282,17 +348,27 @@ const Sales = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Draft':
-        return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+        return 'bg-slate-500/10 text-slate-500 border border-slate-500/20';
       case 'Confirmed':
-        return 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+        return 'bg-cyan-500/10 text-cyan-600 border border-cyan-500/20';
       case 'Partially Delivered':
-        return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+        return 'bg-amber-500/10 text-amber-600 border border-amber-500/20';
       case 'Fully Delivered':
-        return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-      default: // Cancelled
-        return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+        return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
+      case 'Fully Deliverable':
+        return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
+      case 'Partially Deliverable':
+        return 'bg-amber-500/10 text-amber-600 border border-amber-500/20';
+      case 'Waiting for Stock':
+        return 'bg-purple-500/10 text-purple-650 border border-purple-500/20';
+      case 'Cancelled':
+        return 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+      default:
+        return 'bg-slate-500/10 text-slate-550 border border-slate-500/20';
     }
   };
+
+  const shortageMetrics = getFormShortageMetrics();
 
   const filteredOrders = salesOrders.filter((so) => {
     const matchesSearch =
@@ -304,6 +380,17 @@ const Sales = () => {
 
   return (
     <Layout title="Sales & Orders">
+      {errorMessage && !showAddModal && !showEditModal && !showDeliverModal && (
+        <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex justify-between items-center animate-in fade-in duration-200">
+          <div className="flex gap-2 items-center font-medium">
+            <AlertTriangle size={16} className="text-red-550" />
+            {errorMessage}
+          </div>
+          <button onClick={() => setErrorMessage('')} className="text-red-500 hover:text-red-700">
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b border-slate-200 pb-3">
         <div>
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -351,6 +438,9 @@ const Sales = () => {
             <option value="Confirmed">Confirmed</option>
             <option value="Partially Delivered">Partially Delivered</option>
             <option value="Fully Delivered">Fully Delivered</option>
+            <option value="Fully Deliverable">Fully Deliverable</option>
+            <option value="Partially Deliverable">Partially Deliverable</option>
+            <option value="Waiting for Stock">Waiting for Stock</option>
             <option value="Cancelled">Cancelled</option>
           </select>
         </div>
@@ -389,7 +479,7 @@ const Sales = () => {
                     <td className="px-6 py-4">
                       <div className="font-semibold text-slate-900 flex items-center gap-1">
                         <Coins size={13} className="text-blue-500" />
-                        ${so.totalAmount.toFixed(2)}
+                        ₹{so.totalAmount.toFixed(2)}
                       </div>
                       <div className="text-xs text-slate-550 mt-0.5">
                         {so.items.length} Product types ordered
@@ -425,11 +515,7 @@ const Sales = () => {
                         {so.status === 'Draft' && canManage && (
                           <div className="flex items-center gap-1.5">
                             <button
-                              onClick={() => {
-                                if (window.confirm(`Confirm Sales Order ${so.soNumber}? This will reserve stock and trigger automatic PO/MO for shortages.`)) {
-                                  confirmMutation.mutate(so._id);
-                                }
-                              }}
+                              onClick={() => setSoToConfirm(so)}
                               className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1 rounded-lg text-xs font-semibold border border-blue-200 transition-all flex items-center gap-1"
                               title="Confirm SO"
                             >
@@ -444,7 +530,7 @@ const Sales = () => {
                             </button>
                           </div>
                         )}
-                        {(so.status === 'Confirmed' || so.status === 'Partially Delivered') && canDeliver && (
+                        {['Confirmed', 'Partially Delivered', 'Fully Deliverable', 'Partially Deliverable', 'Waiting for Stock'].includes(so.status) && canDeliver && (
                           <button
                             onClick={() => handleOpenDeliver(so)}
                             className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1 rounded-lg text-xs font-semibold border border-blue-200 transition-all flex items-center gap-1"
@@ -520,7 +606,7 @@ const Sales = () => {
                             className="glass-input w-full text-xs"
                           >
                             <option value="">-- Select --</option>
-                            {products.map((p) => (
+                            {(products || []).map((p) => (
                               <option key={p._id} value={p._id}>
                                 [{p.sku}] {p.name}
                               </option>
@@ -528,8 +614,8 @@ const Sales = () => {
                           </select>
                           {item.product && (
                             <div className="text-[10px] text-slate-500 mt-1 flex gap-3 px-1">
-                              <span>Free: <strong className="text-emerald-600 font-mono font-bold">{products.find(p => p._id === item.product)?.freeToUse ?? 0}</strong></span>
-                              <span>Reserved: <strong className="text-amber-600 font-mono font-bold">{products.find(p => p._id === item.product)?.reserved ?? 0}</strong></span>
+                              <span>Free: <strong className="text-emerald-600 font-mono font-bold">{(products || []).find(p => p._id === item.product)?.freeToUse ?? 0}</strong></span>
+                              <span>Reserved: <strong className="text-amber-600 font-mono font-bold">{(products || []).find(p => p._id === item.product)?.reserved ?? 0}</strong></span>
                             </div>
                           )}
                         </div>
@@ -570,6 +656,44 @@ const Sales = () => {
                   })}
                 </div>
               </div>
+
+              {/* Delivery Preferences and Shortage Info */}
+              {shortageMetrics.totalShortage > 0 && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Stock Shortage Info</h4>
+                  
+                  <div className="space-y-3">
+                    {/* Warning Banner */}
+                    <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl flex flex-col gap-1.5 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2 font-bold text-amber-900">
+                        <AlertTriangle size={15} />
+                        Stock Shortage: Partial Delivery Allowed
+                      </div>
+                      <div>
+                        Ordered: <strong>{shortageMetrics.totalQty}</strong> | Available immediately: <strong className="text-emerald-700">{shortageMetrics.totalAvailable}</strong> | Shortage: <strong className="text-rose-600">{shortageMetrics.totalShortage}</strong>
+                      </div>
+                      <div className="text-[11px] text-amber-700">
+                        The available {shortageMetrics.totalAvailable} units will be shipped immediately on confirmation. Auto-procurement will trigger for the remaining {shortageMetrics.totalShortage} units.
+                      </div>
+                    </div>
+
+                    {/* Expected Delivery Date */}
+                    <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                      <label className="block text-xs text-slate-650 font-semibold mb-1">
+                        Expected Delivery Date (for remaining items) *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.expectedDeliveryDate}
+                        onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="glass-input w-full text-sm font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs text-slate-600 font-semibold mb-1">Special Delivery Notes</label>
@@ -657,7 +781,7 @@ const Sales = () => {
                             className="glass-input w-full text-xs"
                           >
                             <option value="">-- Select --</option>
-                            {products.map((p) => (
+                            {(products || []).map((p) => (
                               <option key={p._id} value={p._id}>
                                 [{p.sku}] {p.name}
                               </option>
@@ -665,8 +789,8 @@ const Sales = () => {
                           </select>
                           {item.product && (
                             <div className="text-[10px] text-slate-500 mt-1 flex gap-3 px-1">
-                              <span>Free: <strong className="text-emerald-600 font-mono font-bold">{products.find(p => p._id === item.product)?.freeToUse ?? 0}</strong></span>
-                              <span>Reserved: <strong className="text-amber-600 font-mono font-bold">{products.find(p => p._id === item.product)?.reserved ?? 0}</strong></span>
+                              <span>Free: <strong className="text-emerald-600 font-mono font-bold">{(products || []).find(p => p._id === item.product)?.freeToUse ?? 0}</strong></span>
+                              <span>Reserved: <strong className="text-amber-600 font-mono font-bold">{(products || []).find(p => p._id === item.product)?.reserved ?? 0}</strong></span>
                             </div>
                           )}
                         </div>
@@ -707,6 +831,44 @@ const Sales = () => {
                   })}
                 </div>
               </div>
+
+              {/* Delivery Preferences and Shortage Info */}
+              {shortageMetrics.totalShortage > 0 && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Stock Shortage Info</h4>
+                  
+                  <div className="space-y-3">
+                    {/* Warning Banner */}
+                    <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl flex flex-col gap-1.5 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2 font-bold text-amber-900">
+                        <AlertTriangle size={15} />
+                        Stock Shortage: Partial Delivery Allowed
+                      </div>
+                      <div>
+                        Ordered: <strong>{shortageMetrics.totalQty}</strong> | Available immediately: <strong className="text-emerald-700">{shortageMetrics.totalAvailable}</strong> | Shortage: <strong className="text-rose-600">{shortageMetrics.totalShortage}</strong>
+                      </div>
+                      <div className="text-[11px] text-amber-700">
+                        The available {shortageMetrics.totalAvailable} units will be shipped immediately on confirmation. Auto-procurement will trigger for the remaining {shortageMetrics.totalShortage} units.
+                      </div>
+                    </div>
+
+                    {/* Expected Delivery Date */}
+                    <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                      <label className="block text-xs text-slate-650 font-semibold mb-1">
+                        Expected Delivery Date (for remaining items) *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.expectedDeliveryDate}
+                        onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="glass-input w-full text-sm font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs text-slate-600 font-semibold mb-1">Special Delivery Notes</label>
@@ -757,14 +919,14 @@ const Sales = () => {
 
             <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto font-sans">
               {/* Info grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-600 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-600 text-xs">
                 <div>
                   <h5 className="font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Customer</h5>
                   <div className="font-bold text-slate-900 text-sm">{selectedSO.customerName}</div>
                 </div>
                 <div>
                   <h5 className="font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Order Details</h5>
-                  <div>Total: <span className="font-bold text-slate-900">${selectedSO.totalAmount.toFixed(2)}</span></div>
+                  <div>Total: <span className="font-bold text-slate-900">₹{selectedSO.totalAmount.toFixed(2)}</span></div>
                   <div>Created By: {selectedSO.createdBy?.username} ({selectedSO.createdBy?.role})</div>
                 </div>
                 <div>
@@ -775,6 +937,22 @@ const Sales = () => {
                   )}
                   {selectedSO.completedAt && (
                     <div>Completed: {new Date(selectedSO.completedAt).toLocaleDateString()}</div>
+                  )}
+                </div>
+                <div>
+                  <h5 className="font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Delivery Preference</h5>
+                  <div>Partial Delivery: <span className="font-bold text-slate-900">{selectedSO.allowPartialDelivery ? 'Allowed' : 'Not Allowed'}</span></div>
+                  {selectedSO.expectedDeliveryDate && (
+                    <div>Expected Delivery: <span className="font-bold text-amber-600">{new Date(selectedSO.expectedDeliveryDate).toLocaleDateString()}</span></div>
+                  )}
+                  {selectedSO.shortageQuantity > 0 && (
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[10px] text-slate-500 space-y-0.5">
+                      <div>Available: <span className="font-bold text-slate-700">{selectedSO.availableQuantity}</span></div>
+                      <div>Shortage: <span className="font-bold text-rose-600">{selectedSO.shortageQuantity}</span></div>
+                      {selectedSO.pendingQuantity > 0 && (
+                        <div>Pending: <span className="font-bold text-amber-600">{selectedSO.pendingQuantity}</span></div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -797,8 +975,8 @@ const Sales = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {selectedSO.items.map((item, idx) => {
-                        const productDetail = products.find(p => p._id === item.product._id);
-                        const freeToUse = productDetail ? productDetail.freeToUse : 0;
+                        const productDetail = item.product ? (products || []).find(p => p._id === item.product._id) : null;
+                        const freeToUse = productDetail && typeof productDetail.freeToUse === 'number' ? productDetail.freeToUse : 0;
 
                         // Shortage condition on draft confirmation:
                         const shortage = item.quantity - freeToUse;
@@ -855,11 +1033,7 @@ const Sales = () => {
                 <div>
                   {selectedSO.status !== 'Fully Delivered' && selectedSO.status !== 'Cancelled' && canManage && (
                     <button
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to cancel this customer Sales Order? Allocated stock reservations will be released.')) {
-                          cancelMutation.mutate(selectedSO._id);
-                        }
-                      }}
+                      onClick={() => setSoToCancel(selectedSO)}
                       className="glass-btn-danger text-xs font-semibold px-4 py-2 flex items-center gap-1.5"
                     >
                       <Ban size={14} /> Cancel Order
@@ -877,17 +1051,13 @@ const Sales = () => {
                   </button>
                   {selectedSO.status === 'Draft' && canManage && (
                     <button
-                      onClick={() => {
-                        if (window.confirm('Confirming this Sales Order locks down stock allocations and triggers automatic procurement POs/MOs for shortages. Proceed?')) {
-                          confirmMutation.mutate(selectedSO._id);
-                        }
-                      }}
+                      onClick={() => setSoToConfirm(selectedSO)}
                       className="glass-btn-primary text-xs font-semibold px-5 py-2 flex items-center gap-1.5"
                     >
                       <CheckCircle size={14} /> Confirm Sales Order
                     </button>
                   )}
-                  {(selectedSO.status === 'Confirmed' || selectedSO.status === 'Partially Delivered') && canDeliver && (
+                  {['Confirmed', 'Partially Delivered', 'Fully Deliverable', 'Partially Deliverable', 'Waiting for Stock'].includes(selectedSO.status) && canDeliver && (
                     <button
                       onClick={() => handleOpenDeliver(selectedSO)}
                       className="glass-btn-primary text-xs font-semibold px-5 py-2 flex items-center gap-1.5"
@@ -998,6 +1168,102 @@ const Sales = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Custom Confirmation Modal */}
+      {soToConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-155">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden p-6 space-y-4">
+            <div className="flex items-center gap-3 text-blue-600">
+              <CheckCircle size={24} />
+              <h3 className="font-bold text-slate-800 text-lg">Confirm Sales Order</h3>
+            </div>
+            
+            <p className="text-xs text-slate-650">
+              Are you sure you want to confirm Sales Order <strong className="text-blue-600 font-mono">{soToConfirm.soNumber}</strong>?
+            </p>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs text-slate-600">
+              <div>Customer Preference: <strong>{soToConfirm.allowPartialDelivery ? 'Allow Partial Delivery' : 'Require Full Delivery'}</strong></div>
+              {soToConfirm.shortageQuantity > 0 ? (
+                <>
+                  <div className="text-amber-700 font-medium">Shortage Detected: {soToConfirm.shortageQuantity} units shortage.</div>
+                  {soToConfirm.allowPartialDelivery ? (
+                    <div className="text-slate-500 text-[11px] leading-relaxed">
+                      • <strong>{soToConfirm.availableQuantity}</strong> units will be delivered immediately.<br />
+                      • Auto-procurement will trigger for the remaining <strong>{soToConfirm.shortageQuantity}</strong> units.<br />
+                      • Status will become <strong className="text-amber-600">Partially Deliverable</strong>.
+                    </div>
+                  ) : (
+                    <div className="text-slate-500 text-[11px] leading-relaxed">
+                      • No stock will be reserved/delivered now.<br />
+                      • Auto-procurement will trigger for the full <strong>{soToConfirm.shortageQuantity}</strong> shortage units.<br />
+                      • Status will become <strong className="text-purple-650 font-bold">Waiting for Stock</strong>.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-emerald-700 font-medium leading-relaxed">
+                  • Stock is fully available.<br />
+                  • All items will be reserved.<br />
+                  • Status will become <strong className="text-emerald-600 font-bold">Fully Deliverable</strong>.
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setSoToConfirm(null)}
+                className="glass-btn-secondary text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  confirmMutation.mutate(soToConfirm._id);
+                  setSoToConfirm(null);
+                }}
+                className="glass-btn-primary text-xs font-semibold px-4"
+              >
+                Confirm Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Cancel Confirmation Modal */}
+      {soToCancel && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-155">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden p-6 space-y-4">
+            <div className="flex items-center gap-3 text-red-650">
+              <Ban size={24} />
+              <h3 className="font-bold text-slate-800 text-lg">Cancel Sales Order</h3>
+            </div>
+            
+            <p className="text-xs text-slate-650">
+              Are you sure you want to cancel Sales Order <strong className="text-blue-600 font-mono">{soToCancel.soNumber}</strong>? Any stock reservations for this order will be released.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setSoToCancel(null)}
+                className="glass-btn-secondary text-xs"
+              >
+                No, Keep Order
+              </button>
+              <button
+                onClick={() => {
+                  cancelMutation.mutate(soToCancel._id);
+                  setSoToCancel(null);
+                  setShowDetailsModal(false);
+                }}
+                className="glass-btn-danger text-xs font-semibold px-4"
+              >
+                Yes, Cancel Order
+              </button>
+            </div>
           </div>
         </div>
       )}

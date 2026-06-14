@@ -311,10 +311,10 @@ const Products = () => {
                       <div className="flex flex-col">
                         <span className="text-slate-900 flex items-center gap-1">
                           <Coins size={12} className="text-blue-500" />
-                          ${product.salesPrice.toFixed(2)} <span className="text-[10px] text-slate-500">(Sales)</span>
+                          ₹{product.salesPrice.toFixed(2)} <span className="text-[10px] text-slate-500">(Sales)</span>
                         </span>
                         <span className="text-xs text-slate-500 mt-0.5">
-                          Cost: ${product.costPrice.toFixed(2)}
+                          Cost: ₹{product.costPrice.toFixed(2)}
                         </span>
                       </div>
                     </td>

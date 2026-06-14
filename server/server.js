@@ -26,6 +26,7 @@ import vendorRouter from './routes/vendor.routes.js';
 import purchaseRouter from './routes/purchase.routes.js';
 import manufacturingRouter from './routes/manufacturing.routes.js';
 import salesRouter from './routes/sales.routes.js';
+import auditRouter from './routes/audit.routes.js';
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/products', productRouter);
@@ -33,6 +34,7 @@ app.use('/api/v1/vendors', vendorRouter);
 app.use('/api/v1/purchase', purchaseRouter);
 app.use('/api/v1/manufacturing', manufacturingRouter);
 app.use('/api/v1/sales', salesRouter);
+app.use('/api/v1/audit-logs', auditRouter);
 
 // Base route
 app.get('/', (req, res) => {

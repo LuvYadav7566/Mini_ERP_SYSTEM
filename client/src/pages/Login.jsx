@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, AlertCircle, CheckCircle2, Lock, Sparkles, User } from 'lucide-react';
+import { ArrowRight, AlertCircle, Briefcase, CheckCircle2, ChevronDown, Lock, Sparkles, User } from 'lucide-react';
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const [role, setRole] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,26 +19,11 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(username, password);
+      await login(username, password, role);
       navigate('/');
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || 'Login failed. Check credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickLogin = async (userRole) => {
-    setUsername(userRole);
-    setPassword('password123');
-    setError('');
-    setLoading(true);
-    try {
-      await login(userRole, 'password123');
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Quick login failed.');
     } finally {
       setLoading(false);
     }
@@ -98,6 +84,30 @@ const Login = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Role</label>
+                <div className="relative">
+                  <Briefcase size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
+                  <select
+                    required
+                    className="w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-10 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 animate-fade-in"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                  >
+                    <option value="" disabled>Select your role</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Sales User">Sales User</option>
+                    <option value="Purchase User">Purchase User</option>
+                    <option value="Manufacturing User">Manufacturing User</option>
+                    <option value="Inventory Manager">Inventory Manager</option>
+                    <option value="Business Owner">Business Owner</option>
+                  </select>
+                  <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
+                    <ChevronDown size={18} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">Username</label>
                 <div className="relative">
                   <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
@@ -137,26 +147,6 @@ const Login = () => {
               </button>
             </form>
 
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-4 flex items-center justify-center gap-2 text-sm font-medium text-slate-600">
-                <Sparkles size={16} className="text-blue-500" />
-                Quick login presets use password: password123
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {['admin', 'sales', 'purchase', 'manufacturing', 'inventory', 'owner'].map((role) => {
-                  return (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => handleQuickLogin(role)}
-                      className="rounded-xl border border-blue-100 bg-white px-3 py-2.5 text-sm font-medium capitalize transition text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                    >
-                      {role}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
       </div>

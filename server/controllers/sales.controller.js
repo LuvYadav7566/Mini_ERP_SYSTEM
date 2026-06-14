@@ -5,6 +5,7 @@ import PurchaseOrder from '../models/PurchaseOrder.js';
 import ManufacturingOrder from '../models/ManufacturingOrder.js';
 import Vendor from '../models/Vendor.js';
 import BoM from '../models/BoM.js';
+import AuditLog from '../models/AuditLog.js';
 
 // Helper: Generate SO Number (SO-YYYY-0001)
 const generateSONumber = async () => {
@@ -60,7 +61,7 @@ export const getSalesOrderById = async (req, res, next) => {
 // @access  Private/Admin, Business Owner, Sales User
 export const createSalesOrder = async (req, res, next) => {
   try {
-    const { customerName, items, notes } = req.body;
+    const { customerName, items, notes, allowPartialDelivery, expectedDeliveryDate } = req.body;
 
     if (!customerName || !items || items.length === 0) {
       res.status(400);
@@ -69,6 +70,8 @@ export const createSalesOrder = async (req, res, next) => {
 
     const orderItems = [];
     let totalAmount = 0;
+    let totalAvailableQuantity = 0;
+    let totalShortageQuantity = 0;
 
     for (const item of items) {
       const product = await Product.findById(item.product);
@@ -85,6 +88,12 @@ export const createSalesOrder = async (req, res, next) => {
 
       const salesPrice = parseFloat(item.salesPrice) >= 0 ? parseFloat(item.salesPrice) : product.salesPrice;
       totalAmount += quantity * salesPrice;
+
+      const availableForThis = Math.max(0, Math.min(quantity, product.freeToUse));
+      const shortageForThis = Math.max(0, quantity - product.freeToUse);
+
+      totalAvailableQuantity += availableForThis;
+      totalShortageQuantity += shortageForThis;
 
       orderItems.push({
         product: product._id,
@@ -104,6 +113,11 @@ export const createSalesOrder = async (req, res, next) => {
       notes,
       createdBy: req.user._id,
       status: 'Draft',
+      allowPartialDelivery: allowPartialDelivery !== undefined ? allowPartialDelivery : true,
+      expectedDeliveryDate: expectedDeliveryDate || null,
+      availableQuantity: totalAvailableQuantity,
+      shortageQuantity: totalShortageQuantity,
+      pendingQuantity: 0,
     });
 
     const savedOrder = await order.save();
@@ -133,14 +147,18 @@ export const updateSalesOrder = async (req, res, next) => {
       throw new Error('Only Draft Sales Orders can be updated');
     }
 
-    const { customerName, items, notes } = req.body;
+    const { customerName, items, notes, allowPartialDelivery, expectedDeliveryDate } = req.body;
 
     if (customerName) order.customerName = customerName.trim();
     if (notes !== undefined) order.notes = notes;
+    if (allowPartialDelivery !== undefined) order.allowPartialDelivery = allowPartialDelivery;
+    if (expectedDeliveryDate !== undefined) order.expectedDeliveryDate = expectedDeliveryDate;
 
     if (items && items.length > 0) {
       const orderItems = [];
       let totalAmount = 0;
+      let totalAvailableQuantity = 0;
+      let totalShortageQuantity = 0;
 
       for (const item of items) {
         const product = await Product.findById(item.product);
@@ -158,6 +176,12 @@ export const updateSalesOrder = async (req, res, next) => {
         const salesPrice = parseFloat(item.salesPrice) >= 0 ? parseFloat(item.salesPrice) : product.salesPrice;
         totalAmount += quantity * salesPrice;
 
+        const availableForThis = Math.max(0, Math.min(quantity, product.freeToUse));
+        const shortageForThis = Math.max(0, quantity - product.freeToUse);
+
+        totalAvailableQuantity += availableForThis;
+        totalShortageQuantity += shortageForThis;
+
         orderItems.push({
           product: product._id,
           quantity,
@@ -167,6 +191,22 @@ export const updateSalesOrder = async (req, res, next) => {
       }
       order.items = orderItems;
       order.totalAmount = totalAmount;
+      order.availableQuantity = totalAvailableQuantity;
+      order.shortageQuantity = totalShortageQuantity;
+    } else {
+      let totalAvailableQuantity = 0;
+      let totalShortageQuantity = 0;
+      for (const item of order.items) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          const availableForThis = Math.max(0, Math.min(item.quantity, product.freeToUse));
+          const shortageForThis = Math.max(0, item.quantity - product.freeToUse);
+          totalAvailableQuantity += availableForThis;
+          totalShortageQuantity += shortageForThis;
+        }
+      }
+      order.availableQuantity = totalAvailableQuantity;
+      order.shortageQuantity = totalShortageQuantity;
     }
 
     const updatedOrder = await order.save();
@@ -195,125 +235,230 @@ export const confirmSalesOrder = async (req, res, next) => {
       throw new Error('Only Draft Sales Orders can be confirmed');
     }
 
-    // Process reservations and trigger procurement automation
+    let totalShortage = 0;
+    let totalAvailable = 0;
+    let totalQuantity = 0;
+    const itemStockDetails = [];
+
+    // Evaluate stock availability for all items
     for (const item of order.items) {
       const product = await Product.findById(item.product);
       if (!product) continue;
-
-      // Reserve quantities (deduct from freeToUse and add to reserved)
+      
       const freeToUseBefore = product.freeToUse;
-      product.reserved += item.quantity;
-      product.freeToUse -= item.quantity;
-      await product.save();
+      const availableForThis = Math.max(0, Math.min(item.quantity, freeToUseBefore));
+      const shortageForThis = Math.max(0, item.quantity - freeToUseBefore);
+      
+      totalAvailable += availableForThis;
+      totalShortage += shortageForThis;
+      totalQuantity += item.quantity;
 
-      // MTO/MTS Shortage Check
-      // Shortage is when the demand (item.quantity) exceeds the available free stock (freeToUseBefore).
-      const shortage = item.quantity - freeToUseBefore;
+      itemStockDetails.push({
+        item,
+        product,
+        availableForThis,
+        shortageForThis,
+      });
+    }
 
-      const needsProcurement = true; // Auto-procure on any shortage to keep departments in sync
+    order.availableQuantity = totalAvailable;
+    order.shortageQuantity = totalShortage;
 
-      if (shortage > 0 && needsProcurement) {
-        console.log(`[ERP Automation] Shortage of ${shortage} units detected for ${product.name} [Strategy: ${product.procurementStrategy}]`);
-        
-        if (product.procurementType === 'Purchase') {
-          // --- AUTOMATIC PURCHASE ORDER GENERATION ---
-          // Resolve Vendor ID
-          let vendorId = null;
-          if (product.vendor) {
-            const matchedVendor = await Vendor.findOne({ name: new RegExp(`^${product.vendor.trim()}$`, 'i') });
-            if (matchedVendor) {
-              vendorId = matchedVendor._id;
-            }
+    if (totalShortage === 0) {
+      // ----------------------------------------------------
+      // CASE 1: SUFFICIENT STOCK (FULLY DELIVERABLE)
+      // ----------------------------------------------------
+      for (const details of itemStockDetails) {
+        details.product.reserved += details.item.quantity;
+        details.product.freeToUse -= details.item.quantity;
+        await details.product.save();
+      }
+
+      order.status = 'Fully Deliverable';
+      order.pendingQuantity = 0;
+      order.confirmedAt = new Date();
+      const savedOrder = await order.save();
+
+      // Log in AuditLog
+      await AuditLog.create({
+        action: 'Sales Order Confirmation',
+        user: req.user._id,
+        performedBy: req.user.username,
+        details: `Confirmed Sales Order ${order.soNumber}. Status: Fully Deliverable. Stock is fully available.`,
+      });
+
+      return res.json(savedOrder);
+    } else {
+      // ----------------------------------------------------
+      // CASE 2: STOCK SHORTAGE DETECTED
+      // ----------------------------------------------------
+      if (order.allowPartialDelivery) {
+        // --- OPTION 1: ALLOW PARTIAL DELIVERY ---
+        for (const details of itemStockDetails) {
+          const product = details.product;
+          const item = details.item;
+          const availableQty = details.availableForThis;
+          const shortageQty = details.shortageForThis;
+
+          // Deliver available quantity immediately
+          if (availableQty > 0) {
+            item.quantityDelivered = availableQty;
+            
+            const prevOnHand = product.freeToUse + product.reserved;
+            product.freeToUse -= availableQty;
+            await product.save();
+
+            // Log physical shipment dispatch in StockLedger
+            await StockLedger.create({
+              product: product._id,
+              quantityChange: -availableQty,
+              prevOnHand,
+              newOnHand: product.freeToUse + product.reserved,
+              transactionType: 'Sales Delivery',
+              referenceId: order.soNumber,
+              performedBy: req.user._id,
+              notes: `Immediate partial delivery of ${availableQty} units for Sales Order ${order.soNumber}`,
+            });
           }
-          
-          if (!vendorId) {
-            // Fallback: Use first vendor or throw warning (for safety, grab first available)
-            const firstVendor = await Vendor.findOne({});
-            if (firstVendor) {
-              vendorId = firstVendor._id;
-            } else {
-              console.warn(`[ERP Automation] Cannot create auto-PO: No vendors exist in database.`);
-              continue;
-            }
+
+          // Trigger automatic PO/MO for the shortage quantity
+          if (shortageQty > 0) {
+            await triggerProcurementForShortage(product, shortageQty, order.soNumber, req.user._id);
           }
-
-          const poYear = new Date().getFullYear();
-          const startYear = new Date(poYear, 0, 1);
-          const endYear = new Date(poYear, 11, 31, 23, 59, 59);
-          const count = await PurchaseOrder.countDocuments({ createdAt: { $gte: startYear, $lte: endYear } });
-          const poNumber = `PO-${poYear}-${String(count + 1).padStart(4, '0')}`;
-
-          await PurchaseOrder.create({
-            poNumber,
-            vendor: vendorId,
-            items: [
-              {
-                product: product._id,
-                quantity: shortage,
-                costPrice: product.costPrice,
-                quantityReceived: 0,
-              }
-            ],
-            totalAmount: shortage * product.costPrice,
-            notes: `[AUTO-PROCUREMENT] Automatically generated from Sales Order ${order.soNumber} to fulfill MTO/Shortage demand.`,
-            createdBy: req.user._id,
-            status: 'Draft',
-          });
-          console.log(`[ERP Automation] Draft Purchase Order ${poNumber} generated successfully for ${shortage} units of ${product.sku}.`);
-
-        } else if (product.procurementType === 'Manufacturing') {
-          // --- AUTOMATIC MANUFACTURING ORDER GENERATION ---
-          if (!product.bom) {
-            console.warn(`[ERP Automation] Cannot create auto-MO: Product has no linked BoM recipe.`);
-            continue;
-          }
-
-          const bomDetails = await BoM.findById(product.bom).populate('components.product');
-          if (!bomDetails) continue;
-
-          // Generate requirements
-          const components = bomDetails.components.map((c) => ({
-            product: c.product._id,
-            quantityRequired: c.quantity * shortage,
-            quantityConsumed: 0,
-          }));
-
-          const workOrders = bomDetails.operations.map((op) => ({
-            name: op.name,
-            duration: op.duration,
-            workCenter: op.workCenter,
-            status: 'Pending',
-          }));
-
-          const moYear = new Date().getFullYear();
-          const startYear = new Date(moYear, 0, 1);
-          const endYear = new Date(moYear, 11, 31, 23, 59, 59);
-          const count = await ManufacturingOrder.countDocuments({ createdAt: { $gte: startYear, $lte: endYear } });
-          const moNumber = `MO-${moYear}-${String(count + 1).padStart(4, '0')}`;
-
-          await ManufacturingOrder.create({
-            moNumber,
-            product: product._id,
-            quantity: shortage,
-            bom: bomDetails._id,
-            components,
-            workOrders,
-            status: 'Draft',
-            createdBy: req.user._id,
-            notes: `[AUTO-PROCUREMENT] Automatically generated from Sales Order ${order.soNumber} to fulfill MTO/Shortage production.`,
-          });
-          console.log(`[ERP Automation] Draft Manufacturing Order ${moNumber} generated successfully for ${shortage} units of ${product.sku}.`);
         }
+
+        order.status = 'Partially Deliverable';
+        order.pendingQuantity = totalShortage;
+        order.confirmedAt = new Date();
+        const savedOrder = await order.save();
+
+        // Log in AuditLog
+        await AuditLog.create({
+          action: 'Sales Order Confirmation',
+          user: req.user._id,
+          performedBy: req.user.username,
+          details: `Confirmed Sales Order ${order.soNumber} with Partial Delivery. Shipped ${totalAvailable} units immediately. Shortage of ${totalShortage} units queued. Expected delivery: ${order.expectedDeliveryDate ? new Date(order.expectedDeliveryDate).toLocaleDateString() : 'N/A'}.`,
+        });
+
+        return res.json(savedOrder);
+      } else {
+        // --- OPTION 2: REQUIRE FULL DELIVERY ---
+        for (const details of itemStockDetails) {
+          const product = details.product;
+          const shortageQty = details.shortageForThis;
+
+          // Do NOT reserve or deliver stock. Trigger PO/MO for the entire shortage.
+          if (shortageQty > 0) {
+            await triggerProcurementForShortage(product, shortageQty, order.soNumber, req.user._id);
+          }
+        }
+
+        order.status = 'Waiting for Stock';
+        order.pendingQuantity = totalQuantity;
+        order.confirmedAt = new Date();
+        const savedOrder = await order.save();
+
+        // Log in AuditLog
+        await AuditLog.create({
+          action: 'Sales Order Confirmation',
+          user: req.user._id,
+          performedBy: req.user.username,
+          details: `Confirmed Sales Order ${order.soNumber} requiring Full Delivery. Shortage of ${totalShortage} units detected. Order status set to Waiting for Stock.`,
+        });
+
+        return res.json(savedOrder);
+      }
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Helper: Trigger automated PO or MO for shortages
+const triggerProcurementForShortage = async (product, shortage, soNumber, userId) => {
+  if (product.procurementType === 'Purchase') {
+    let vendorId = null;
+    if (product.vendor) {
+      const matchedVendor = await Vendor.findOne({ name: new RegExp(`^${product.vendor.trim()}$`, 'i') });
+      if (matchedVendor) {
+        vendorId = matchedVendor._id;
+      }
+    }
+    
+    if (!vendorId) {
+      const firstVendor = await Vendor.findOne({});
+      if (firstVendor) {
+        vendorId = firstVendor._id;
+      } else {
+        console.warn(`[ERP Automation] Cannot create auto-PO: No vendors exist in database.`);
+        return;
       }
     }
 
-    order.status = 'Confirmed';
-    order.confirmedAt = new Date();
-    const savedOrder = await order.save();
+    const poYear = new Date().getFullYear();
+    const startYear = new Date(poYear, 0, 1);
+    const endYear = new Date(poYear, 11, 31, 23, 59, 59);
+    const count = await PurchaseOrder.countDocuments({ createdAt: { $gte: startYear, $lte: endYear } });
+    const poNumber = `PO-${poYear}-${String(count + 1).padStart(4, '0')}`;
 
-    res.json(savedOrder);
-  } catch (error) {
-    next(error);
+    await PurchaseOrder.create({
+      poNumber,
+      vendor: vendorId,
+      items: [
+        {
+          product: product._id,
+          quantity: shortage,
+          costPrice: product.costPrice,
+          quantityReceived: 0,
+        }
+      ],
+      totalAmount: shortage * product.costPrice,
+      notes: `[AUTO-PROCUREMENT] Automatically generated from Sales Order ${soNumber} to fulfill shortage demand.`,
+      createdBy: userId,
+      status: 'Draft',
+    });
+    console.log(`[ERP Automation] Draft Purchase Order ${poNumber} generated successfully for ${shortage} units of ${product.sku}.`);
+
+  } else if (product.procurementType === 'Manufacturing') {
+    if (!product.bom) {
+      console.warn(`[ERP Automation] Cannot create auto-MO: Product has no linked BoM recipe.`);
+      return;
+    }
+
+    const bomDetails = await BoM.findById(product.bom).populate('components.product');
+    if (!bomDetails) return;
+
+    const components = bomDetails.components.map((c) => ({
+      product: c.product._id,
+      quantityRequired: c.quantity * shortage,
+      quantityConsumed: 0,
+    }));
+
+    const workOrders = bomDetails.operations.map((op) => ({
+      name: op.name,
+      duration: op.duration,
+      workCenter: op.workCenter,
+      status: 'Pending',
+    }));
+
+    const moYear = new Date().getFullYear();
+    const startYear = new Date(moYear, 0, 1);
+    const endYear = new Date(moYear, 11, 31, 23, 59, 59);
+    const count = await ManufacturingOrder.countDocuments({ createdAt: { $gte: startYear, $lte: endYear } });
+    const moNumber = `MO-${moYear}-${String(count + 1).padStart(4, '0')}`;
+
+    await ManufacturingOrder.create({
+      moNumber,
+      product: product._id,
+      quantity: shortage,
+      bom: bomDetails._id,
+      components,
+      workOrders,
+      status: 'Draft',
+      createdBy: userId,
+      notes: `[AUTO-PROCUREMENT] Automatically generated from Sales Order ${soNumber} to fulfill shortage production.`,
+    });
+    console.log(`[ERP Automation] Draft Manufacturing Order ${moNumber} generated successfully for ${shortage} units of ${product.sku}.`);
   }
 };
 
@@ -335,9 +480,10 @@ export const deliverSalesOrderGoods = async (req, res, next) => {
       throw new Error('Sales Order not found');
     }
 
-    if (order.status !== 'Confirmed' && order.status !== 'Partially Delivered') {
+    const validStatuses = ['Confirmed', 'Partially Delivered', 'Fully Deliverable', 'Partially Deliverable', 'Waiting for Stock'];
+    if (!validStatuses.includes(order.status)) {
       res.status(400);
-      throw new Error('Goods can only be delivered for Confirmed or Partially Delivered Sales Orders');
+      throw new Error('Goods can only be delivered for Confirmed, Fully Deliverable, or Partially Deliverable Sales Orders');
     }
 
     // Process each delivery item
@@ -453,8 +599,8 @@ export const cancelSalesOrder = async (req, res, next) => {
       throw new Error('Sales Order is already cancelled');
     }
 
-    // Release reservations if Confirmed
-    if (order.status === 'Confirmed') {
+    // Release reservations if Confirmed or Fully Deliverable
+    if (order.status === 'Confirmed' || order.status === 'Fully Deliverable') {
       for (const item of order.items) {
         const product = await Product.findById(item.product);
         if (product) {

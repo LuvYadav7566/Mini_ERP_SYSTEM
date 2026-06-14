@@ -522,7 +522,7 @@ const Purchase = () => {
                         <td className="px-6 py-4">
                           <div className="font-semibold text-slate-100 flex items-center gap-1">
                             <Coins size={13} className="text-cyan-400" />
-                            ${po.totalAmount.toFixed(2)}
+                            ₹{po.totalAmount.toFixed(2)}
                           </div>
                           <div className="text-xs text-slate-400 mt-0.5">
                             {po.items.length} Product types ordered
@@ -1155,7 +1155,7 @@ const Purchase = () => {
                 </div>
                 <div>
                   <h5 className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-1">Order Details</h5>
-                  <div>Total Value: <span className="font-bold text-slate-100">${selectedPO.totalAmount.toFixed(2)}</span></div>
+                  <div>Total Value: <span className="font-bold text-slate-100">₹{selectedPO.totalAmount.toFixed(2)}</span></div>
                   <div>Raised By: {selectedPO.createdBy?.username} ({selectedPO.createdBy?.role})</div>
                   <div>Created On: {new Date(selectedPO.createdAt).toLocaleDateString()}</div>
                 </div>
@@ -1197,7 +1197,7 @@ const Purchase = () => {
                             <td className="px-4 py-2.5 font-medium">{item.product?.name}</td>
                             <td className="px-4 py-2.5 font-mono text-cyan-400">{item.product?.sku}</td>
                             <td className="px-4 py-2.5 text-right font-mono font-bold">{item.quantity}</td>
-                            <td className="px-4 py-2.5 text-right font-mono">${item.costPrice.toFixed(2)}</td>
+                            <td className="px-4 py-2.5 text-right font-mono">₹{item.costPrice.toFixed(2)}</td>
                             <td className={`px-4 py-2.5 text-right font-mono font-bold ${
                               item.quantityReceived === item.quantity
                                 ? 'text-emerald-400'
@@ -1207,14 +1207,14 @@ const Purchase = () => {
                             }`}>
                               {item.quantityReceived} / {item.quantity}
                             </td>
-                            <td className="px-4 py-2.5 text-right font-mono font-bold">${subtotal.toFixed(2)}</td>
+                            <td className="px-4 py-2.5 text-right font-mono font-bold">₹{subtotal.toFixed(2)}</td>
                           </tr>
                         );
                       })}
                       <tr className="bg-slate-950/20 font-bold border-t border-slate-850 text-slate-100">
                         <td colSpan="5" className="px-4 py-3 text-right uppercase">Grand Total:</td>
                         <td className="px-4 py-3 text-right font-mono text-cyan-400 text-sm">
-                          ${selectedPO.totalAmount.toFixed(2)}
+                          ₹{selectedPO.totalAmount.toFixed(2)}
                         </td>
                       </tr>
                     </tbody>

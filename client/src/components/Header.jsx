@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import SocketIndicator from './SocketIndicator';
 import { useSocket } from '../context/SocketContext';
 import { Bell, CheckSquare, Trash2 } from 'lucide-react';
 
@@ -14,9 +13,6 @@ const Header = ({ title }) => {
       <h1 className="text-lg font-bold text-slate-800">{title || 'Shiv Furniture Works'}</h1>
 
       <div className="flex items-center gap-4">
-        {/* Socket Status Indicator */}
-        <SocketIndicator />
-
         {/* Notifications Icon & Dropdown */}
         <div className="relative">
           <button 

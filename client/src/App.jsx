@@ -11,6 +11,7 @@ import Purchase from './pages/Purchase';
 import BoM from './pages/BoM';
 import Manufacturing from './pages/Manufacturing';
 import Sales from './pages/Sales';
+import AuditLogs from './pages/AuditLogs';
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Sales />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/audit-logs" 
+                element={
+                  <ProtectedRoute>
+                    <AuditLogs />
                   </ProtectedRoute>
                 } 
               />
